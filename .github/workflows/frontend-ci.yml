@@ -16,7 +16,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: frontend
+        working-directory: starter/frontend
 
     steps:
       - name: Checkout code
@@ -30,8 +30,8 @@ jobs:
       - name: Restore dependencies cache
         uses: actions/cache@v4
         with:
-          path: frontend/node_modules
-          key: frontend-node-modules-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+          path: starter/frontend/node_modules
+          key: frontend-node-modules-${{ runner.os }}-${{ hashFiles('starter/frontend/package-lock.json') }}
           restore-keys: |
             frontend-node-modules-${{ runner.os }}-
 
@@ -62,8 +62,8 @@ jobs:
       - name: Restore dependencies cache
         uses: actions/cache@v4
         with:
-          path: frontend/node_modules
-          key: frontend-node-modules-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+          path: starter/frontend/node_modules
+          key: frontend-node-modules-${{ runner.os }}-${{ hashFiles('starter/frontend/package-lock.json') }}
           restore-keys: |
             frontend-node-modules-${{ runner.os }}-
 
@@ -92,9 +92,9 @@ jobs:
           node-version: "18"
 
       - name: Install dependencies
-        working-directory: frontend
+        working-directory: starter/frontend
         run: npm ci
 
       - name: Build frontend
-        working-directory: frontend
+        working-directory: starter/frontend
         run: npm run build
