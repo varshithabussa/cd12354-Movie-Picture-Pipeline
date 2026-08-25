@@ -1,0 +1,49 @@
+name: Frontend Continuous Deployment
+
+on:
+  workflow_run:
+    workflows:
+      - "Frontend Continuous Integration"
+    types:
+      - completed
+
+jobs:
+  deploy:
+    name: Deploy Frontend to EKS
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --region us-east-1 \
+            --name cluster
+
+      - name: Update frontend image
+        working-directory: starter/frontend/k8s
+        run: |
+          kubectl set image deployment/frontend \
+            frontend=995651107487.dkr.ecr.us-east-1.amazonaws.com/frontend:${{ github.event.workflow_run.head_sha }}
+
+      - name: Wait for frontend rollout
+        run: |
+          kubectl rollout status deployment/frontend --timeout=180s
+
+      - name: Verify frontend deployment
+        run: |
+          kubectl get deployment frontend
+          kubectl get pods -l app=frontend
+          kubectl get service frontend
