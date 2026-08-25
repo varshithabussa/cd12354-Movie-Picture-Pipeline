@@ -97,6 +97,8 @@ jobs:
 
       - name: Build frontend
         working-directory: starter/frontend
+        env:
+          REACT_APP_MOVIE_API_URL: http://a906913d59c7648129d6e6b511576a5a-1897789467.us-east-1.elb.amazonaws.com
         run: npm run build
 
       - name: Configure AWS credentials
@@ -116,8 +118,11 @@ jobs:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: frontend
           IMAGE_TAG: ${{ github.sha }}
+          REACT_APP_MOVIE_API_URL: http://a906913d59c7648129d6e6b511576a5a-1897789467.us-east-1.elb.amazonaws.com
         run: |
-          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker build \
+            --build-arg REACT_APP_MOVIE_API_URL=$REACT_APP_MOVIE_API_URL \
+            -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
           docker tag $REGISTRY/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:latest
 
       - name: Push Docker image to ECR
