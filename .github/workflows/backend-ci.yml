@@ -36,7 +36,6 @@ jobs:
       - name: Run lint
         run: pipenv run flake8
 
-
   test:
     name: Backend Tests
     runs-on: ubuntu-latest
@@ -63,9 +62,8 @@ jobs:
       - name: Run tests
         run: pipenv run pytest
 
-
   build:
-    name: Backend Build
+    name: Backend Build and Push
     runs-on: ubuntu-latest
 
     needs:
@@ -76,19 +74,32 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          python-version: "3.10"
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
-      - name: Install pipenv
-        working-directory: starter/backend
-        run: pip install pipenv
-
-      - name: Install dependencies
-        working-directory: starter/backend
-        run: pipenv install --dev
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build Docker image
         working-directory: starter/backend
-        run: docker build -t mp-backend:ci .
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: backend
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker tag $REGISTRY/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:latest
+
+      - name: Push Docker image to ECR
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: backend
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          docker push $REGISTRY/$REPOSITORY:latest
