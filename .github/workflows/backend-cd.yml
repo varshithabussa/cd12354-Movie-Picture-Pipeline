@@ -1,0 +1,50 @@
+name: Backend Continuous Deployment
+
+on:
+  workflow_run:
+    workflows:
+      - Backend Continuous Integration
+    types:
+      - completed
+
+jobs:
+  deploy:
+    name: Deploy Backend to EKS
+    runs-on: ubuntu-latest
+
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig \
+            --region us-east-1 \
+            --name cluster
+
+      - name: Update backend image
+        working-directory: starter/backend/k8s
+        run: |
+          kubectl set image deployment/backend \
+            backend=995651107487.dkr.ecr.us-east-1.amazonaws.com/backend:${{ github.event.workflow_run.head_sha }}
+
+      - name: Wait for backend rollout
+        run: |
+          kubectl rollout status deployment/backend --timeout=180s
+
+      - name: Verify backend deployment
+        run: |
+          kubectl get deployment backend
+          kubectl get pods -l app=backend
+          kubectl get service backend
